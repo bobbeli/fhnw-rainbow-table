@@ -1,13 +1,12 @@
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
- * Created by dimitri on 16.05.2017.
+ * This Class Represents a Instance
+ * of a RainbowTable
  */
 public class RainbowTableCalc {
 
@@ -22,70 +21,79 @@ public class RainbowTableCalc {
 
     public static String finalHashValue = "1d56a37fb6b08aa709fe90e12ca59e12";
 
-
+    /**
+     * Constructor
+     * Generates The RainbowTable
+     */
     public RainbowTableCalc(){
-        // Fills the PASSWORD Hash Map with all possible Passwords
         printMessage("Started generating all Possible Passwords");
         generatePossibleStrings(7, Z, "");
         printMessage("Passwords are generated");
 
-        printMessage("Started generating EndPoint Values of all Passwords");
+        printMessage("Started generating EndPoint Values of all Passwords ...");
         generateEndPointValForAllPasswords();
         printMessage("All End Point Values are Generated");
-
-
-        //searchForHashValue( "29c3eea3f305d6b823f562ac4be35217", 0 );
-
-
-
+        printMessage("Rainbow Table Ready");
     }
 
     /**
-     * TODO
-     * @param hash
-     * @param stuffe
-     * @return
+     * Tries to find a clear Text
+     * Value of the given HashValue
      */
-    public String searchForHashValue( String hashString, int stuffe ) {
-        // while ( stuffe < 200 )
-        // chck hash with las reduction if its in passwords as value
-            // if (yes) -> get Start Value and search for h(start) -> r(start,1) etc.. bis h(x) == hash
-            // then, get x as password
-            // else check stuffe -1
+    public void findPasswordForGivenHash(){
+        String password = findPassword( finalHashValue, 1999 );
+        printMessage("Password: "+password+"  to Hash: "+finalHashValue);
+    }
+
+    /**
+     * Searches the Password for a given Hash and the Max r (stuffe)
+     * @param hashString hash Value as Hex String
+     * @param stuffe Max Reduction Stuffe of RainbowTable
+     * @return String the Password of the given hashString or a Not Found Message
+     */
+    public String findPassword( String hashString, int stuffe ) {
+
+        BigInteger temp = null;
         BigInteger hash = new BigInteger(hashString, 16);
         String r, startVal;
         boolean haveFoundHash = false;
+        boolean haveFoundEndVal = false;
+        r = getReduction(hash, stuffe);
 
         while ( stuffe >= 0 ) {
-            r = getReduction(hash, stuffe);
-
             for (Map.Entry<String, String> entry : PASSWORDS.entrySet()){
-
                 if( entry.getValue().equals(r) ) {
-                    // habe start value gefunden
+
+                    haveFoundEndVal = true;
+                    printMessage("Found EedPoint Value");
                     startVal = entry.getKey();
 
-                    // rechne h(start) bis h(start == hashString ist)
-                    // if True
                     int i = 0;
-                    while ( ! haveFoundHash ) {
-                        haveFoundHash = isHashEqualstoMD5(startVal, hashString);
-                        getReduction(hash, i);
+                    while ( ! haveFoundHash  && i < 1999) {
+                        BigInteger tempHash = getMD5(startVal);
+
+                        // If Hash is Equals, the startVal is our Password
+                        if(hash.equals(tempHash)){
+
+                            return startVal;
+                        }
+                        startVal = getReduction(tempHash, i);
                         i++;
                     }
-
-                    //
-
-
                 }
             }
-
             stuffe--;
+
+            temp = hash;
+            for (int i = stuffe; i < 2000; i++){
+                r = getReduction(temp, i);
+                temp = getMD5(r);
+            }
+
         }
 
-        return null;
+        return "no password found";
     }
-
 
     /**
      * Generating 2000 Passwords
@@ -114,29 +122,32 @@ public class RainbowTableCalc {
 
         for (Map.Entry<String, String> entry : PASSWORDS.entrySet()){
 
-            String endPoint = getEndPointVal(entry.getKey());
+            String endPoint = getEndPointVal(entry.getKey(), 2000);
 
             entry.setValue(endPoint);
         }
     }
 
     /**
-     * Geenrates a MD5 Hash of a given String
-     * and calcs Reducefunction of it
-     * @param input String Value to be hashed
+     * Generates the EndPoint Value of the Rainbow Table
+     * of a given input String
+     * @param input String Start Value of the RainbowTable
      * @return String of Endpoint Value after 2000 Iterations
      */
-    public String getEndPointVal(String input) {
-        for(int i = 0; i < 2000; i++ ){
-
-            input = getReducedMD5(input, i);
+    public String getEndPointVal(String input, int length) {
+        for(int i = 0; i < length; i++ ){
+            input = getReduction(getMD5(input), i);
         }
         return input;
     }
 
-    public String getReducedMD5(String input, int stuffe){
+    /**
+     * Creats a MD5 Hash Value of a given String
+     * @param input
+     * @return BigInteger of the hashed String
+     */
+    public BigInteger getMD5(String input){
         BigInteger md5 = null;
-        String res = "";
 
         if(null == input) return null;
 
@@ -149,36 +160,12 @@ public class RainbowTableCalc {
             md5 = new BigInteger(1, digest.digest());
 
             // Get
-            res = getReduction(md5, stuffe);
 
         } catch (NoSuchAlgorithmException e) {
 
             e.printStackTrace();
         }
-        return res;
-    }
-
-    public boolean isHashEqualstoMD5(String input, String hash){
-        String md5 = null;
-        String res = "";
-
-        if(null == input) return false;
-
-        try {
-            //Create & Update MessageDigest object for MD5
-            MessageDigest digest = MessageDigest.getInstance("MD5");
-            digest.update(input.getBytes(), 0, input.length());
-
-            //Converts message digest value in base 16 (hex)
-            md5 = new BigInteger(1, digest.digest()).toString(16);
-
-
-
-        } catch (NoSuchAlgorithmException e) {
-
-            e.printStackTrace();
-        }
-        return md5.equals(hash);
+        return md5;
     }
 
     /**
@@ -199,11 +186,14 @@ public class RainbowTableCalc {
         return res;
     }
 
+    /**
+     * Print Method
+     * @param msg
+     */
     public void printMessage(String msg){
         System.out.println("----------------------------------------------------------");
         System.out.println("     " + msg);
 
     }
-
 
 }
