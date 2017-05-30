@@ -28,12 +28,6 @@ public class RainbowTableCalcTest {
         assertEquals(res3, "dues6fg");
     }
 
-    @org.junit.Test
-    public void testSearchForHashValue() throws Exception {
-        String res = rainBowTable.searchForHashValue("29c3eea3f305d6b823f562ac4be35217", 1999);
-        assertEquals(res, "87inwgn");
-
-    }
 
 
 }
