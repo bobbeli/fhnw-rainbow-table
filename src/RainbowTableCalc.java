@@ -3,6 +3,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -33,25 +34,58 @@ public class RainbowTableCalc {
         printMessage("All End Point Values are Generated");
 
 
+        //searchForHashValue( "29c3eea3f305d6b823f562ac4be35217", 0 );
+
 
 
     }
 
     /**
-     * TODO 
+     * TODO
      * @param hash
      * @param stuffe
      * @return
      */
-    public String searchForHashValue( String hash, int stuffe ) {
+    public String searchForHashValue( String hashString, int stuffe ) {
         // while ( stuffe < 200 )
         // chck hash with las reduction if its in passwords as value
             // if (yes) -> get Start Value and search for h(start) -> r(start,1) etc.. bis h(x) == hash
             // then, get x as password
             // else check stuffe -1
+        BigInteger hash = new BigInteger(hashString, 16);
+        String r, startVal;
+        boolean haveFoundHash = false;
+
+        while ( stuffe >= 0 ) {
+            r = getReduction(hash, stuffe);
+
+            for (Map.Entry<String, String> entry : PASSWORDS.entrySet()){
+
+                if( entry.getValue().equals(r) ) {
+                    // habe start value gefunden
+                    startVal = entry.getKey();
+
+                    // rechne h(start) bis h(start == hashString ist)
+                    // if True
+                    int i = 0;
+                    while ( ! haveFoundHash ) {
+                        haveFoundHash = isHashEqualstoMD5(startVal, hashString);
+                        getReduction(hash, i);
+                        i++;
+                    }
+
+                    //
+
+
+                }
+            }
+
+            stuffe--;
+        }
 
         return null;
     }
+
 
     /**
      * Generating 2000 Passwords
@@ -79,7 +113,9 @@ public class RainbowTableCalc {
     public void generateEndPointValForAllPasswords(){
 
         for (Map.Entry<String, String> entry : PASSWORDS.entrySet()){
+
             String endPoint = getEndPointVal(entry.getKey());
+
             entry.setValue(endPoint);
         }
     }
@@ -92,6 +128,7 @@ public class RainbowTableCalc {
      */
     public String getEndPointVal(String input) {
         for(int i = 0; i < 2000; i++ ){
+
             input = getReducedMD5(input, i);
         }
         return input;
@@ -119,6 +156,29 @@ public class RainbowTableCalc {
             e.printStackTrace();
         }
         return res;
+    }
+
+    public boolean isHashEqualstoMD5(String input, String hash){
+        String md5 = null;
+        String res = "";
+
+        if(null == input) return false;
+
+        try {
+            //Create & Update MessageDigest object for MD5
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            digest.update(input.getBytes(), 0, input.length());
+
+            //Converts message digest value in base 16 (hex)
+            md5 = new BigInteger(1, digest.digest()).toString(16);
+
+
+
+        } catch (NoSuchAlgorithmException e) {
+
+            e.printStackTrace();
+        }
+        return md5.equals(hash);
     }
 
     /**
